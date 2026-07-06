@@ -1,0 +1,27 @@
+# specular-sentinel.service :: one observation pass, then exit.
+# Type=oneshot because the timer owns the cadence; a long-running daemon
+# would just be a sleep loop with worse failure isolation.
+#
+# DynamicUser removes any assumption about which local account exists on
+# the machine: systemd allocates an ephemeral user per run, and
+# StateDirectory hands it a persistent /var/lib/specular-sentinel that
+# survives between runs for the drift baseline. The EnvironmentFile is
+# read by PID 1 before privileges drop, so root-only 600 on the secret
+# file still works.
+
+[Unit]
+Description=specular-sentinel: local infra health facts for atlas-api-public
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+StateDirectory=specular-sentinel
+EnvironmentFile=/etc/specular-sentinel/env
+Environment=STATE_FILE=/var/lib/specular-sentinel/state.json
+ExecStart=/usr/bin/python3 /opt/specular-sentinel/sentinel.py
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes

@@ -1,0 +1,17 @@
+# Five-minute cadence, clock-aligned so "last checked" timestamps read
+# cleanly, with a small jitter so a fleet of timers never thundering-herds
+# anything. Persistent=true fires a missed run straight after a resume,
+# which matters on a machine that sleeps: the first thing a waking
+# SPECULAR-CORE does is tell the edge it is alive again.
+
+[Unit]
+Description=Run specular-sentinel every five minutes
+
+[Timer]
+OnCalendar=*:0/5
+RandomizedDelaySec=15
+Persistent=true
+Unit=specular-sentinel.service
+
+[Install]
+WantedBy=timers.target

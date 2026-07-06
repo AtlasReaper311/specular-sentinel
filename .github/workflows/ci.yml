@@ -1,0 +1,58 @@
+# CI gate for specular-sentinel: the ollama-rag-kit pattern. Syntax-check
+# the module, run the unit suite (network seams are mocked, so this runs
+# anywhere), report to #ci-cd via direct curl (workflows are
+# self-contained; they never depend on the router being up to report
+# their own outcomes).
+#
+# workflow_dispatch is declared from day one so ramone-voice-trigger
+# can fire this repo without a follow-up patch.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Syntax-check every module
+        run: python -m compileall .
+
+      - name: Unit suite
+        run: python -m unittest -v
+
+      - name: Notify #ci-cd
+        if: always()
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_CICD_WEBHOOK }}
+          STATUS: ${{ job.status }}
+        run: |
+          [ -z "$WEBHOOK" ] && echo "no webhook secret; skipping" && exit 0
+          if [ "$STATUS" = "success" ]; then COLOUR=4906624; ICON="🟢"; else COLOUR=14830410; ICON="🔴"; fi
+          RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          PAYLOAD=$(jq -n \
+            --arg icon "$ICON" \
+            --arg status "$STATUS" \
+            --arg run_url "$RUN_URL" \
+            --argjson colour "$COLOUR" \
+            '{
+              username: "ci-cd",
+              embeds: [{
+                title: "specular-sentinel CI",
+                description: ($icon + " compileall + unittest: " + $status),
+                color: $colour,
+                fields: [{name: "Run", value: ("[logs](" + $run_url + ")"), inline: true}],
+                footer: {text: "Atlas Systems — Pipeline"}
+              }]
+            }')
+          curl -sS -X POST "$WEBHOOK" -H "Content-Type: application/json" -d "$PAYLOAD"
