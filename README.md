@@ -58,7 +58,7 @@ Three checks per pass, each shape-validated rather than status-code-validated:
 |---|---|
 | `ollama` | `GET /api/tags` returns the tags document; the model server is answering its own API, not just accepting TCP |
 | `corpus_health` | `GET /health` on [`atlas-corpus`](https://github.com/AtlasReaper311/atlas-corpus) matches `HealthResponse` and reports `ok: true` |
-| `corpus_search` | `GET /search` with a canary query matches `SearchResponse`; the embed-to-Chroma path works end to end, which a healthy `/health` does not prove |
+| `corpus_search` | `GET /search` with a canary query matches `SearchResponse`; the embed-to-configured-vector-backend path works end to end, which a healthy `/health` does not prove |
 
 The canary carries `X-Atlas-Internal` from a loopback address, and the corpus skips both query logging and rate limiting for exactly that combination, so monitoring never pollutes the RAG query stats it sits beside.
 

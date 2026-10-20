@@ -14,7 +14,8 @@ Checks per run:
   ollama          GET {OLLAMA_URL}/api/tags, shape-validated (models list)
   corpus_health   GET {CORPUS_URL}/health, shape-validated (HealthResponse)
   corpus_search   GET {CORPUS_URL}/search?q=<canary>, shape-validated
-                  (SearchResponse); proves embed -> Chroma end to end,
+                  (SearchResponse); proves the configured vector backend
+                  end to end,
                   which a 200 from /health does not
 
 The search canary carries X-Atlas-Internal from a loopback source, and
@@ -152,7 +153,8 @@ def validate_corpus_health(data) -> str | None:
         return "body is not a JSON object"
     for key, kind in (
         ("ok", bool),
-        ("chroma_ok", bool),
+        ("vector_backend", str),
+        ("vector_store_ok", bool),
         ("ollama_ok", bool),
         ("documents", int),
         ("chunks", int),
@@ -180,7 +182,8 @@ def check_corpus_health(cfg: dict) -> dict:
             "ok": False,
             "latency_ms": latency,
             "detail": (
-                f"service reports degraded: chroma_ok={data['chroma_ok']} "
+                f"service reports degraded: vector_backend={data['vector_backend']} "
+                f"vector_store_ok={data['vector_store_ok']} "
                 f"ollama_ok={data['ollama_ok']}"
             ),
         }
@@ -210,7 +213,7 @@ def validate_search_response(data) -> str | None:
 
 
 def check_corpus_search(cfg: dict) -> dict:
-    """A real /search round trip: query embedding through Chroma and back.
+    """A real /search round trip through the configured vector backend.
 
     Zero hits is still ok; the contract under test is the response shape
     and the embed pipeline, not corpus contents (an empty corpus surfaces
