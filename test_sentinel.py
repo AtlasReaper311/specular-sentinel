@@ -21,7 +21,8 @@ GOOD_HEALTH = {
     "ok": True,
     "service": "atlas-corpus",
     "version": "1.0.0",
-    "chroma_ok": True,
+    "vector_backend": "qdrant",
+    "vector_store_ok": True,
     "ollama_ok": True,
     "documents": 12,
     "chunks": 340,
@@ -109,13 +110,14 @@ class CheckTests(unittest.TestCase):
         self.assertTrue(result["detail"].startswith("OSError"))
 
     def test_corpus_health_surfaces_degraded_flags(self):
-        degraded = dict(GOOD_HEALTH, ok=False, chroma_ok=False)
+        degraded = dict(GOOD_HEALTH, ok=False, vector_store_ok=False)
         with mock.patch.object(
             sentinel, "http_get_json", return_value=(200, degraded, 20)
         ):
             result = sentinel.check_corpus_health(self.cfg)
         self.assertFalse(result["ok"])
-        self.assertIn("chroma_ok=False", result["detail"])
+        self.assertIn("vector_backend=qdrant", result["detail"])
+        self.assertIn("vector_store_ok=False", result["detail"])
 
     def test_search_canary_sends_the_internal_header(self):
         captured = {}
